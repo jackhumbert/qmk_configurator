@@ -2,8 +2,8 @@ title: QMK Configurator
 email: hello@qmk.fm
 show_downloads: true
 description: An open source firmware for AVR and ARM based keyboards
-baseurl: "qmk_configurator"
+baseurl: "/qmk_configurator"
 url: "http://jackhumbert.github.io"
 github_username: qmk
-repository: qmk/qmk_configurator
+repository: jackhumbert/qmk_configurator
 theme: jekyll-theme-minimal
