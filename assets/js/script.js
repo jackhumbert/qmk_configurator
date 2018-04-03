@@ -35,6 +35,47 @@ $(document).ready(() => {
 
   var $keycodes = $('.keycode'); // wait until they are created
   $keycodes.each(makeDraggable);
+  $('#visual-keymap').click(function(evt) {
+    console.log(evt.target);
+    var $target = $(evt.target);
+    $('.key.keycode-select').removeClass('keycode-select');
+    if ($target.hasClass('key')) {
+      $target.addClass('keycode-select');
+    }
+  });
+
+  $('#keycodes').click(function(evt) {
+    var _keycode = $(evt.target).data('code');
+    if (_keycode === undefined) {
+      return;
+    }
+
+    var meta = lookupKeycode(_keycode);
+    if (meta === undefined) {
+      return;
+    }
+
+    var $key = $('#visual-keymap .key.keycode-select');
+    var _index = $key.data('index');
+    if ($key === undefined || _index === undefined || !_.isNumber(_index)) {
+      return;
+    }
+
+    if ($key.hasClass('key-contents')) {
+      keymap[layer][_index].contents = {
+        name: meta.name,
+        code: _keycode.data('code'),
+        type: meta.type
+      };
+    } else {
+      var keycode = assign_key(layer, _index, meta.name, _keycode, meta.type);
+      if (keycode.type === 'layer') {
+        keymap[layer][_index].layer = 0;
+      }
+    }
+    $('.key.keycode-select').removeClass('keycode-select');
+    render_key(layer, _index);
+  });
 
   var promise = $.get(backend_keyboards_url, createKeyboardDropdown);
 
@@ -76,6 +117,11 @@ $(document).ready(() => {
     urlRouteChanged();
   });
 
+  var keypressListener = new window.keypress.Listener();
+  keypressListener.simple_combo('esc', function() {
+    $('.key.keycode-select').removeClass('keycode-select');
+  });
+
   return;
 
   ////////////////////////////////////////
@@ -83,7 +129,6 @@ $(document).ready(() => {
   // Implementation goes here
   //
   ////////////////////////////////////////
-
 
   function loadDefault() {
     // hard-coding planck as the only default right now
@@ -108,7 +153,9 @@ $(document).ready(() => {
         render_layout($layout.val());
       });
     } else {
-      $status.append(`\n* Sorry there is no default for the ${$keyboard.val()} keyboard... yet!`);
+      $status.append(
+        `\n* Sorry there is no default for the ${$keyboard.val()} keyboard... yet!`
+      );
     }
   }
 
@@ -273,7 +320,6 @@ $(document).ready(() => {
     } else {
       $layout.val(layout_from_hash());
     }
-    // render_layout($("#layout").val());
   }
 
   function switchKeyboardLayout() {
@@ -304,6 +350,7 @@ $(document).ready(() => {
     $(d).draggable({
       revert: true,
       revertDuration: 100,
+      distance: 10,
       drag: function() {
         $(d).draggable('option', 'revertDuration', 100);
       }
@@ -431,6 +478,8 @@ $(document).ready(() => {
       width: max_x + 'px',
       height: max_y + 'px'
     });
+
+    $('.key').each(makeDraggable);
   }
 
   function check_status() {
@@ -502,7 +551,6 @@ $(document).ready(() => {
   }
 
   function newKey(metadata, keycode, obj) {
-
     var key = {
       name: metadata.name,
       code: keycode,
@@ -652,32 +700,44 @@ $(document).ready(() => {
         }
       },
       drop: function(event, ui) {
-        if ($(t).hasClass('active-key')) {
-          $(ui.helper[0]).draggable('option', 'revertDuration', 0);
-          $(t).removeClass('active-key');
-          $('.layer.active').addClass('non-empty');
-          $(t).attr('data-code', ui.helper[0].dataset.code);
+        if (!$(t).hasClass('active-key')) {
+          return;
+        }
+        var srcKeycode = ui.helper[0];
+        $(srcKeycode).draggable('option', 'revertDuration', 0);
+        $(t).removeClass('active-key');
+        $('.layer.active').addClass('non-empty');
+        if ($(srcKeycode).hasClass('keycode')) {
+          $(t).attr('data-code', srcKeycode.dataset.code);
           // $(t).draggable({revert: true, revertDuration: 100});
           if ($(t).hasClass('key-contents')) {
             keymap[layer][key].contents = {
-              name: ui.helper[0].innerHTML,
-              code: ui.helper[0].dataset.code,
-              type: ui.helper[0].dataset.type
+              name: srcKeycode.innerHTML,
+              code: srcKeycode.dataset.code,
+              type: srcKeycode.dataset.type
             };
           } else {
             var keycode = assign_key(
               layer,
               key,
-              ui.helper[0].innerHTML,
-              ui.helper[0].dataset.code,
-              ui.helper[0].dataset.type
+              srcKeycode.innerHTML,
+              srcKeycode.dataset.code,
+              srcKeycode.dataset.type
             );
             if (keycode.type === 'layer') {
               keymap[layer][key].layer = 0;
             }
           }
-          render_key(layer, key);
+        } else {
+          // .key
+          var srcIndex = $(srcKeycode).data('index');
+          var dstIndex = $(t).data('index');
+          var temp = keymap[layer][srcIndex];
+          keymap[layer][srcIndex] = keymap[layer][dstIndex];
+          keymap[layer][dstIndex] = temp;
+          render_key(layer, srcIndex);
         }
+        render_key(layer, key);
       }
     };
   }
@@ -732,7 +792,9 @@ $(document).ready(() => {
       var remove_keycode = $('<div>', {
         class: 'remove',
         html: '&#739;',
-        click: function() {
+        click: function(evt) {
+          evt.preventDefault();
+          evt.stopPropagation();
           assign_key(layer, k, '', 'KC_NO', '');
           render_key(layer, k);
         }
