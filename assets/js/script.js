@@ -354,7 +354,9 @@ $(document).ready(() => {
       distance: 5,
       drag: function() {
         var $d = $(d);
-        $d.css({ height: '30px', width: '30px' });
+        if ($(d).hasClass('key')) {
+          $d.css({ height: '30px', width: '30px' });
+        }
         $d.draggable('option', 'revertDuration', 100);
       },
       start: function(event, ui) {
