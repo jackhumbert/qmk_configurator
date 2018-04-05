@@ -348,11 +348,16 @@ $(document).ready(() => {
 
   function makeDraggable(k, d) {
     $(d).draggable({
+      zIndex: 100,
       revert: true,
       revertDuration: 100,
       distance: 10,
       drag: function() {
+        $(d).css({height: '30px', width: '30px'});
         $(d).draggable('option', 'revertDuration', 100);
+      },
+      stop: function() {
+        $(d).css({height: '40px', width: '40px'});
       }
     });
   }
@@ -458,7 +463,9 @@ $(document).ready(() => {
           'px',
         id: 'key-' + k,
         'data-index': k,
-        'data-type': 'key'
+        'data-type': 'key',
+        'data-left': d.x * key_x_spacing,
+        'data-top': d.y * key_y_spacing
       });
       max_x = Math.max(
         max_x,
@@ -730,12 +737,26 @@ $(document).ready(() => {
           }
         } else {
           // .key
-          var srcIndex = $(srcKeycode).data('index');
-          var dstIndex = $(t).data('index');
-          var temp = keymap[layer][srcIndex];
-          keymap[layer][srcIndex] = keymap[layer][dstIndex];
-          keymap[layer][dstIndex] = temp;
-          render_key(layer, srcIndex);
+          var $src = $(srcKeycode);
+          var $dst = $(t);
+          var srcIndex = $src.data('index');
+          var dstIndex = $dst.data('index');
+          var srcPos = { left: `${$src.data('left')}px`, top: `${$src.data('top')}px` };
+          var dstPos = $dst.css(['left','top']);
+          var deferSrc = $.Deferred();
+          var deferDst = $.Deferred();
+          $src.animate({left: dstPos.left, top: dstPos.top}, 150, 'linear', function() { deferSrc.resolve(); });
+          $dst.animate({left: srcPos.left, top: srcPos.top}, 150, 'linear', function() { deferDst.resolve(); });
+          $.when(deferSrc, deferDst).done(function() {
+            var temp = keymap[layer][srcIndex];
+            $src.css({ left: srcPos.left, top: srcPos.top });
+            $dst.css({ left: dstPos.left, top: dstPos.top });
+            keymap[layer][srcIndex] = keymap[layer][dstIndex];
+            keymap[layer][dstIndex] = temp;
+            render_key(layer, srcIndex);
+            render_key(layer, key);
+          })
+          return;
         }
         render_key(layer, key);
       }
