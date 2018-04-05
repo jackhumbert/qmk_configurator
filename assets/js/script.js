@@ -470,9 +470,7 @@ $(document).ready(() => {
           'px',
         id: 'key-' + k,
         'data-index': k,
-        'data-type': 'key',
-        'data-left': d.x * key_x_spacing,
-        'data-top': d.y * key_y_spacing
+        'data-type': 'key'
       });
       max_x = Math.max(
         max_x,
@@ -748,11 +746,10 @@ $(document).ready(() => {
           var srcIndex = $src.data('index');
           var dstIndex = $dst.data('index');
 
-          // we need original left and top positions which are unavailable while
-          // it's being dragged so we stash copies in data-*
+          var srcPrevPos = ui.draggable.data().uiDraggable.originalPosition
           var srcPos = {
-            left: `${$src.data('left')}px`,
-            top: `${$src.data('top')}px`
+            left: `${srcPrevPos.left}px`,
+            top: `${srcPrevPos.top}px`
           };
           var dstPos = $dst.css(['left', 'top']);
           var deferSrc = $.Deferred();
