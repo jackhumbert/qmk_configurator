@@ -351,7 +351,7 @@ $(document).ready(() => {
       zIndex: 100,
       revert: true,
       revertDuration: 100,
-      distance: 10,
+      distance: 5,
       drag: function() {
         var $d = $(d);
         $d.css({ height: '30px', width: '30px' });
@@ -364,7 +364,9 @@ $(document).ready(() => {
         };
       },
       stop: function() {
-        $(d).css({ height: '40px', width: '40px' });
+        if ($(d).hasClass('key')) {
+          $(d).css({ height: '40px', width: '40px' });
+        }
       }
     });
   }
