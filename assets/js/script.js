@@ -353,11 +353,18 @@ $(document).ready(() => {
       revertDuration: 100,
       distance: 10,
       drag: function() {
-        $(d).css({height: '30px', width: '30px'});
-        $(d).draggable('option', 'revertDuration', 100);
+        var $d = $(d);
+        $d.css({ height: '30px', width: '30px' });
+        $d.draggable('option', 'revertDuration', 100);
+      },
+      start: function(event, ui) {
+        $(this).draggable('instance').offset.click = {
+          left: Math.floor(ui.helper.width() / 2),
+          top: Math.floor(ui.helper.height() / 2)
+        };
       },
       stop: function() {
-        $(d).css({height: '40px', width: '40px'});
+        $(d).css({ height: '40px', width: '40px' });
       }
     });
   }
@@ -736,26 +743,48 @@ $(document).ready(() => {
             }
           }
         } else {
-          // .key
           var $src = $(srcKeycode);
           var $dst = $(t);
           var srcIndex = $src.data('index');
           var dstIndex = $dst.data('index');
-          var srcPos = { left: `${$src.data('left')}px`, top: `${$src.data('top')}px` };
-          var dstPos = $dst.css(['left','top']);
+
+          // we need original left and top positions which are unavailable while
+          // it's being dragged so we stash copies in data-*
+          var srcPos = {
+            left: `${$src.data('left')}px`,
+            top: `${$src.data('top')}px`
+          };
+          var dstPos = $dst.css(['left', 'top']);
           var deferSrc = $.Deferred();
           var deferDst = $.Deferred();
-          $src.animate({left: dstPos.left, top: dstPos.top}, 150, 'linear', function() { deferSrc.resolve(); });
-          $dst.animate({left: srcPos.left, top: srcPos.top}, 150, 'linear', function() { deferDst.resolve(); });
+          $src.animate(
+            { left: dstPos.left, top: dstPos.top },
+            150,
+            'linear',
+            function() {
+              deferSrc.resolve();
+            }
+          );
+          $dst.animate(
+            { left: srcPos.left, top: srcPos.top },
+            150,
+            'linear',
+            function() {
+              deferDst.resolve();
+            }
+          );
+          // wait until both animations are complete
           $.when(deferSrc, deferDst).done(function() {
-            var temp = keymap[layer][srcIndex];
+            // restore origina element positions
+            // we're only going to swap their data
             $src.css({ left: srcPos.left, top: srcPos.top });
             $dst.css({ left: dstPos.left, top: dstPos.top });
+            var temp = keymap[layer][srcIndex];
             keymap[layer][srcIndex] = keymap[layer][dstIndex];
             keymap[layer][dstIndex] = temp;
             render_key(layer, srcIndex);
             render_key(layer, key);
-          })
+          });
           return;
         }
         render_key(layer, key);
